@@ -17,10 +17,12 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -41,11 +43,15 @@ public class SetmealController {
     @Autowired
     DishService dishService;
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     @PostMapping
     public R<String> save(@RequestBody SetmealDto setmealDto){
         log.info(String.valueOf(setmealDto));
         setmealService.saveWithDish(setmealDto);
-
+        String key = "seemeal_"+setmealDto.getCategoryId() +"_"+setmealDto.getStatus();
+        redisTemplate.delete(key);
         return R.success("添加成功！");
     }
 
@@ -83,6 +89,8 @@ public class SetmealController {
     @DeleteMapping
     public R<String> delete(@RequestParam List<Long> ids){
         setmealService.removeWithDish(ids);
+        Set key = redisTemplate.keys("seemeal_*");
+        redisTemplate.delete(key);
         return R.success("删除成功");
     }
 
@@ -90,12 +98,24 @@ public class SetmealController {
 
     @GetMapping("/list")
     public R<List<Setmeal>> listR(Setmeal setmeal){
+        List<Setmeal> list = null;
+
+        String key = "seemeal_"+setmeal.getCategoryId() +"_"+setmeal.getStatus();
+
+        list = (List<Setmeal>) redisTemplate.opsForValue().get(key);
+
+        if (list != null){
+            return R.success(list);
+        }
+
         LambdaQueryWrapper<Setmeal> lambdaQueryWrapper = new LambdaQueryWrapper<>();
 
         lambdaQueryWrapper.eq(setmeal.getStatus() != null,Setmeal::getStatus,setmeal.getStatus());
         lambdaQueryWrapper.eq(setmeal.getCategoryId() != null,Setmeal::getCategoryId,setmeal.getCategoryId());
 
-        List<Setmeal> list = setmealService.list(lambdaQueryWrapper);
+        list = setmealService.list(lambdaQueryWrapper);
+
+        redisTemplate.opsForValue().set(key,list);
 
         return R.success(list);
     }

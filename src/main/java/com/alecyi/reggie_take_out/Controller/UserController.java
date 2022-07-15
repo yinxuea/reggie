@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/user")
@@ -26,6 +28,9 @@ public class UserController {
     @Autowired
     UserService userService;
 
+
+    @Autowired
+    private RedisTemplate<String,String> redisTemplate;
 
     /**
      * 邮箱验证码发送
@@ -41,7 +46,9 @@ public class UserController {
             String code = ValidateCodeUtils.generateValidateCode(4).toString();
             log.info("code={}",code);
             //SendEmailUtils.sendEmail("短信","您的邮箱验证码是："+code,email);
-            session.setAttribute(email,code);
+
+            redisTemplate.opsForValue().set(email,code,5, TimeUnit.MINUTES);
+
            return R.success(code);
         }
         return R.error("验证码发送失败！！");
@@ -61,7 +68,7 @@ public class UserController {
         String code = map.get("code").toString();
 
         //获取session保存的验证码
-        Object phone = session.getAttribute(email);
+        Object phone = redisTemplate.opsForValue().get(email);
         if (phone != null && phone.equals(code)){
 
             LambdaQueryWrapper<User> lambdaQueryWrapper = new LambdaQueryWrapper<>();
@@ -74,8 +81,11 @@ public class UserController {
                 userService.save(user);
             }
 
-            session.setAttribute("user",user.getId());
+           session.setAttribute("user",user.getId());
 
+            //从redis获取验证码
+
+            redisTemplate.delete(email);
             return R.success(user);
 
         }
