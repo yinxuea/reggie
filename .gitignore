@@ -20,6 +20,8 @@ logs
 *.iws
 *.iml
 *.ipr
+.mvn
+*.cnd
 
 ### NetBeans ###
 /nbproject/private/
