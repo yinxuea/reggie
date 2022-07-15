@@ -5,6 +5,9 @@ target/
 !**/src/test/**/target/
 .git
 logs
+.mvn
+*.cmd
+mvnw
 
 ### STS ###
 .apt_generated
@@ -20,8 +23,7 @@ logs
 *.iws
 *.iml
 *.ipr
-.mvn
-*.cnd
+
 
 ### NetBeans ###
 /nbproject/private/
