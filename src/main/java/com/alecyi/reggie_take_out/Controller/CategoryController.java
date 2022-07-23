@@ -8,6 +8,9 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -22,6 +25,7 @@ public class CategoryController {
     public CategoryService categoryService;
 
     @PostMapping
+    @CacheEvict(value = "categoryCache",key = "#category.id + '_' + #category.type")
     public R<String> save(@RequestBody Category category){
         categoryService.save(category);
         return R.success("添加成功");
@@ -46,6 +50,7 @@ public class CategoryController {
     }
 
     @DeleteMapping
+    @CacheEvict(value = "categoryCache",allEntries = true)
     public R<String> delete(Long id){
         categoryService.remove(id);
         return R.success("删除成功");
@@ -53,6 +58,7 @@ public class CategoryController {
 
 
     @PutMapping
+    @CacheEvict(value = "categoryCache",key = "#category.id + '_' + #category.type")
     public R<String> update(@RequestBody Category category){
         boolean b = categoryService.updateById(category);
         if (b) {
@@ -64,6 +70,7 @@ public class CategoryController {
 
 
     @GetMapping("/list")
+    @Cacheable(value = "categoryCache",key = "#category.id + '_' + #category.type")
     public R<List<Category>> listR(Category category){
         LambdaQueryWrapper<Category> lambdaQueryWrapper = new LambdaQueryWrapper<>();
 

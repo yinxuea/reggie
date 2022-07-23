@@ -17,12 +17,15 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -47,6 +50,7 @@ public class SetmealController {
     private RedisTemplate redisTemplate;
 
     @PostMapping
+    @CacheEvict(value = "setmealCache",key = "#setmealDto.categoryId + '_' + #setmealDto.status")
     public R<String> save(@RequestBody SetmealDto setmealDto){
         log.info(String.valueOf(setmealDto));
         setmealService.saveWithDish(setmealDto);
@@ -87,6 +91,7 @@ public class SetmealController {
     }
 
     @DeleteMapping
+    @CacheEvict(value = "setmealCache" , allEntries = true) //allEntries 为真的情况，清楚所有的缓存数据
     public R<String> delete(@RequestParam List<Long> ids){
         setmealService.removeWithDish(ids);
         Set key = redisTemplate.keys("seemeal_*");
@@ -97,26 +102,13 @@ public class SetmealController {
 
 
     @GetMapping("/list")
+    @Cacheable(value = "setmealCache",key = "#setmeal.categoryId + '_' + #setmeal.status")
     public R<List<Setmeal>> listR(Setmeal setmeal){
         List<Setmeal> list = null;
-
-        String key = "seemeal_"+setmeal.getCategoryId() +"_"+setmeal.getStatus();
-
-        list = (List<Setmeal>) redisTemplate.opsForValue().get(key);
-
-        if (list != null){
-            return R.success(list);
-        }
-
         LambdaQueryWrapper<Setmeal> lambdaQueryWrapper = new LambdaQueryWrapper<>();
-
         lambdaQueryWrapper.eq(setmeal.getStatus() != null,Setmeal::getStatus,setmeal.getStatus());
         lambdaQueryWrapper.eq(setmeal.getCategoryId() != null,Setmeal::getCategoryId,setmeal.getCategoryId());
-
         list = setmealService.list(lambdaQueryWrapper);
-
-        redisTemplate.opsForValue().set(key,list);
-
         return R.success(list);
     }
 }

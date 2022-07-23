@@ -28,7 +28,7 @@ public class LoginCheckFilter implements Filter {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
-        //log.info("拦截到请求:{}",request.getRequestURI());
+       log.info("拦截到请求:{}",request.getRequestURI());
 
 
         String requestUrl = request.getRequestURI();
